@@ -1,4 +1,4 @@
-// Copyright [2019] LinkedIn Corp. Licensed under the Apache License, Version
+// Copyright [2017] LinkedIn Corp. Licensed under the Apache License, Version
 // 2.0 (the "License"); you may not use this file except in compliance with the
 // License.  You may obtain a copy of the License at
 // http://www.apache.org/licenses/LICENSE-2.0
@@ -139,9 +139,6 @@ func floatingTextDecoder(buf []byte, bitSize int) (interface{}, []byte, error) {
 	datum, err := strconv.ParseFloat(string(buf[:index]), bitSize)
 	if err != nil {
 		return nil, nil, err
-	}
-	if bitSize == 32 {
-		return float32(datum), buf[index:], nil
 	}
 	return datum, buf[index:], nil
 }

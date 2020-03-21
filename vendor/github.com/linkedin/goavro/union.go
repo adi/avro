@@ -1,4 +1,4 @@
-// Copyright [2019] LinkedIn Corp. Licensed under the Apache License, Version
+// Copyright [2017] LinkedIn Corp. Licensed under the Apache License, Version
 // 2.0 (the "License"); you may not use this file except in compliance with the
 // License.  You may obtain a copy of the License at
 // http://www.apache.org/licenses/LICENSE-2.0
@@ -29,7 +29,7 @@ import (
 //        if err != nil {
 //            fmt.Println(err)
 //        }
-//        buf, err := codec.TextualFromNative(nil, goavro.Union("string", "some string"))
+//        buf, err := codec.TextFromNative(nil, goavro.Union("string", "some string"))
 //        if err != nil {
 //            fmt.Println(err)
 //        }
@@ -71,8 +71,7 @@ func buildCodecForTypeDescribedBySlice(st map[string]*Codec, enclosingNamespace 
 	return &Codec{
 		// NOTE: To support record field default values, union schema set to the
 		// type name of first member
-		// TODO: add/change to schemaCanonical below
-		schemaOriginal: codecFromIndex[0].typeName.fullName,
+		schema: codecFromIndex[0].typeName.short(),
 
 		typeName: &name{"union", nullNamespace},
 		nativeFromBinary: func(buf []byte) (interface{}, []byte, error) {

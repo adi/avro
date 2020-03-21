@@ -1,4 +1,4 @@
-// Copyright [2019] LinkedIn Corp. Licensed under the Apache License, Version
+// Copyright [2017] LinkedIn Corp. Licensed under the Apache License, Version
 // 2.0 (the "License"); you may not use this file except in compliance with the
 // License.  You may obtain a copy of the License at
 // http://www.apache.org/licenses/LICENSE-2.0
@@ -26,8 +26,8 @@ func makeRecordCodec(st map[string]*Codec, enclosingNamespace string, schemaMap 
 		return nil, fmt.Errorf("Record %q ought to have fields key", c.typeName)
 	}
 	fieldSchemas, ok := fields.([]interface{})
-	if !ok || fieldSchemas == nil {
-		return nil, fmt.Errorf("Record %q fields ought to be non-nil array: %v", c.typeName, fields)
+	if !ok || len(fieldSchemas) == 0 {
+		return nil, fmt.Errorf("Record %q fields ought to be non-empty array: %v", c.typeName, fields)
 	}
 
 	codecFromFieldName := make(map[string]*Codec)
@@ -70,8 +70,7 @@ func makeRecordCodec(st map[string]*Codec, enclosingNamespace string, schemaMap 
 				}
 				// NOTE: To support record field default values, union schema
 				// set to the type name of first member
-				// TODO: change to schemaCanonical below
-				defaultValue = Union(fieldCodec.schemaOriginal, defaultValue)
+				defaultValue = Union(fieldCodec.schema, defaultValue)
 			}
 			// attempt to encode default value using codec
 			_, err = fieldCodec.binaryFromNative(nil, defaultValue)

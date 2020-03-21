@@ -2,8 +2,6 @@ package sqlavro
 
 import (
 	"database/sql"
-	"fmt"
-	"math/big"
 	"time"
 
 	"github.com/khezen/avro"
@@ -95,7 +93,7 @@ func sql2NativeDateNullable(sqlField interface{}) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		return map[string]interface{}{"int.date": t}, nil
+		return map[string]interface{}{"int": int32(t.Unix())}, nil
 	}
 	return nil, nil
 }
@@ -128,12 +126,7 @@ func sql2NativeTimestampNullable(schema avro.Schema, sqlField interface{}) (inte
 func sql2NativeDecimalNullable(sqlField interface{}) (interface{}, error) {
 	field := *sqlField.(*[]byte)
 	if field != nil {
-		r := new(big.Rat)
-		_, err := fmt.Sscan(string(field), r)
-		if err != nil {
-			return nil, err
-		}
-		return map[string]interface{}{string("bytes.decimal"): r}, nil
+		return map[string]interface{}{string("bytes"): field}, nil
 	}
 	return nil, nil
 }

@@ -1,4 +1,4 @@
-// Copyright [2019] LinkedIn Corp. Licensed under the Apache License, Version
+// Copyright [2017] LinkedIn Corp. Licensed under the Apache License, Version
 // 2.0 (the "License"); you may not use this file except in compliance with the
 // License.  You may obtain a copy of the License at
 // http://www.apache.org/licenses/LICENSE-2.0
@@ -93,7 +93,7 @@ func metadataBinaryReader(ior io.Reader) (map[string][]byte, error) {
 		if blockCount == math.MinInt64 {
 			// The minimum number for any signed numerical type can never be
 			// made positive
-			return nil, fmt.Errorf("cannot read map with block count: %d", blockCount)
+			return nil, fmt.Errorf("cannot read map with block count: %d", math.MinInt64)
 		}
 		// NOTE: A negative block count implies there is a long encoded block
 		// size following the negative block count. We have no use for the block
@@ -141,7 +141,7 @@ func metadataBinaryReader(ior io.Reader) (map[string][]byte, error) {
 			if blockCount == math.MinInt64 {
 				// The minimum number for any signed numerical type can never be
 				// made positive
-				return nil, fmt.Errorf("cannot read map with block count: %d", blockCount)
+				return nil, fmt.Errorf("cannot read map with block count: %d", math.MinInt64)
 			}
 			// NOTE: A negative block count implies there is a long encoded
 			// block size following the negative block count. We have no use for

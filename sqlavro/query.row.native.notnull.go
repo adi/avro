@@ -1,8 +1,6 @@
 package sqlavro
 
 import (
-	"fmt"
-	"math/big"
 	"time"
 
 	"github.com/khezen/avro"
@@ -59,15 +57,10 @@ func sql2NativeDate(sqlField interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return t, nil
+	return int32(t.Unix()), nil
 }
 
 func sql2NativeDecimal(sqlField interface{}) (interface{}, error) {
 	field := *sqlField.(*[]byte)
-	r := new(big.Rat)
-	_, err := fmt.Sscan(string(field), r)
-	if err != nil {
-		return nil, err
-	}
-	return r, nil
+	return field, nil
 }

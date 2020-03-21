@@ -1,4 +1,4 @@
-// Copyright [2019] LinkedIn Corp. Licensed under the Apache License, Version
+// Copyright [2017] LinkedIn Corp. Licensed under the Apache License, Version
 // 2.0 (the "License"); you may not use this file except in compliance with the
 // License.  You may obtain a copy of the License at
 // http://www.apache.org/licenses/LICENSE-2.0
@@ -11,7 +11,6 @@ package goavro
 
 import (
 	"fmt"
-	"strconv"
 )
 
 // Fixed does not have child objects, therefore whatever namespace it defines is
@@ -21,10 +20,16 @@ func makeFixedCodec(st map[string]*Codec, enclosingNamespace string, schemaMap m
 	if err != nil {
 		return nil, fmt.Errorf("Fixed ought to have valid name: %s", err)
 	}
-	size, err := sizeFromSchemaMap(c.typeName, schemaMap)
-	if err != nil {
-		return nil, err
+	// Fixed type must have size
+	s1, ok := schemaMap["size"]
+	if !ok {
+		return nil, fmt.Errorf("Fixed %q ought to have size key", c.typeName)
 	}
+	s2, ok := s1.(float64)
+	if !ok || s2 <= 0 {
+		return nil, fmt.Errorf("Fixed %q size ought to be number greater than zero: %v", c.typeName, s1)
+	}
+	size := uint(s2)
 
 	c.nativeFromBinary = func(buf []byte) (interface{}, []byte, error) {
 		if buflen := uint(len(buf)); size > buflen {
@@ -34,14 +39,9 @@ func makeFixedCodec(st map[string]*Codec, enclosingNamespace string, schemaMap m
 	}
 
 	c.binaryFromNative = func(buf []byte, datum interface{}) ([]byte, error) {
-		var someBytes []byte
-		switch d := datum.(type) {
-		case []byte:
-			someBytes = d
-		case string:
-			someBytes = []byte(d)
-		default:
-			return nil, fmt.Errorf("cannot encode binary fixed %q: expected []byte or string; received: %T", c.typeName, datum)
+		someBytes, ok := datum.([]byte)
+		if !ok {
+			return nil, fmt.Errorf("cannot encode binary fixed %q: expected []byte; received: %T", c.typeName, datum)
 		}
 		if count := uint(len(someBytes)); count != size {
 			return nil, fmt.Errorf("cannot encode binary fixed %q: datum size ought to equal schema size: %d != %d", c.typeName, count, size)
@@ -67,14 +67,9 @@ func makeFixedCodec(st map[string]*Codec, enclosingNamespace string, schemaMap m
 	}
 
 	c.textualFromNative = func(buf []byte, datum interface{}) ([]byte, error) {
-		var someBytes []byte
-		switch d := datum.(type) {
-		case []byte:
-			someBytes = d
-		case string:
-			someBytes = []byte(d)
-		default:
-			return nil, fmt.Errorf("cannot encode textual fixed %q: expected []byte or string; received: %T", c.typeName, datum)
+		someBytes, ok := datum.([]byte)
+		if !ok {
+			return nil, fmt.Errorf("cannot encode textual fixed %q: expected []byte; received: %T", c.typeName, datum)
 		}
 		if count := uint(len(someBytes)); count != size {
 			return nil, fmt.Errorf("cannot encode textual fixed %q: datum size ought to equal schema size: %d != %d", c.typeName, count, size)
@@ -83,29 +78,4 @@ func makeFixedCodec(st map[string]*Codec, enclosingNamespace string, schemaMap m
 	}
 
 	return c, nil
-}
-
-func sizeFromSchemaMap(typeName *name, schemaMap map[string]interface{}) (uint, error) {
-	// Fixed type must have size
-	sizeRaw, ok := schemaMap["size"]
-	if !ok {
-		return 0, fmt.Errorf("Fixed %q ought to have size key", typeName)
-	}
-	var size uint
-	switch val := sizeRaw.(type) {
-	case string:
-		s, err := strconv.ParseUint(val, 10, 0)
-		if err != nil {
-			return 0, fmt.Errorf("Fixed %q size ought to be number greater than zero: %v", typeName, sizeRaw)
-		}
-		size = uint(s)
-	case float64:
-		if val <= 0 {
-			return 0, fmt.Errorf("Fixed %q size ought to be number greater than zero: %v", typeName, sizeRaw)
-		}
-		size = uint(val)
-	default:
-		return 0, fmt.Errorf("Fixed %q size ought to be number greater than zero: %v", typeName, sizeRaw)
-	}
-	return size, nil
 }

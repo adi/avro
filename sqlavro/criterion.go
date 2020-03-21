@@ -98,10 +98,10 @@ func (c *Criterion) setLimitFromNative(limit interface{}) error {
 			primitiveType = string(avro.TypeInt32)
 			break
 		case avro.Type(avro.LogicalTypeDate):
-			primitiveType = "int.date"
+			primitiveType = "int"
 			break
 		case avro.Type(avro.LogicalTypeDecimal):
-			primitiveType = "bytes.decimal"
+			primitiveType = "bytes"
 			break
 		default:
 			primitiveType = string(typeName)
@@ -190,7 +190,7 @@ func rawLimit2Native(schema avro.Schema, limit interface{}) (json.RawMessage, er
 		rawLimit = json.RawMessage(fmt.Sprintf(`"%s"`, t.Format(time.RFC3339Nano)))
 		return rawLimit, nil
 	case avro.Type(avro.LogicalTypeDate):
-		t := limit.(time.Time)
+		t := time.Date(1970, 1, 1, 0, 0, int(limit.(int32)), 0, time.UTC)
 		rawLimit = json.RawMessage(fmt.Sprintf(`"%s"`, t.Format(SQLDateFormat)))
 		return rawLimit, nil
 	case avro.Type(avro.LogicalTypeTime):

@@ -1,4 +1,4 @@
-// Copyright [2019] LinkedIn Corp. Licensed under the Apache License, Version
+// Copyright [2017] LinkedIn Corp. Licensed under the Apache License, Version
 // 2.0 (the "License"); you may not use this file except in compliance with the
 // License.  You may obtain a copy of the License at
 // http://www.apache.org/licenses/LICENSE-2.0
@@ -44,14 +44,75 @@ var (
 // Codec is created as a stateless structure that can be safely used in multiple
 // go routines simultaneously.
 type Codec struct {
-	typeName        *name
-	schemaOriginal  string
-	schemaCanonical string
+	typeName *name
+	schema   string
 
 	nativeFromTextual func([]byte) (interface{}, []byte, error)
 	binaryFromNative  func([]byte, interface{}) ([]byte, error)
 	nativeFromBinary  func([]byte) (interface{}, []byte, error)
 	textualFromNative func([]byte, interface{}) ([]byte, error)
+}
+
+func newSymbolTable() map[string]*Codec {
+	return map[string]*Codec{
+		"boolean": {
+			typeName:          &name{"boolean", nullNamespace},
+			binaryFromNative:  booleanBinaryFromNative,
+			nativeFromBinary:  booleanNativeFromBinary,
+			nativeFromTextual: booleanNativeFromTextual,
+			textualFromNative: booleanTextualFromNative,
+		},
+		"bytes": {
+			typeName:          &name{"bytes", nullNamespace},
+			binaryFromNative:  bytesBinaryFromNative,
+			nativeFromBinary:  bytesNativeFromBinary,
+			nativeFromTextual: bytesNativeFromTextual,
+			textualFromNative: bytesTextualFromNative,
+		},
+		"double": {
+			typeName:          &name{"double", nullNamespace},
+			binaryFromNative:  doubleBinaryFromNative,
+			nativeFromBinary:  doubleNativeFromBinary,
+			nativeFromTextual: doubleNativeFromTextual,
+			textualFromNative: doubleTextualFromNative,
+		},
+		"float": {
+			typeName:          &name{"float", nullNamespace},
+			binaryFromNative:  floatBinaryFromNative,
+			nativeFromBinary:  floatNativeFromBinary,
+			nativeFromTextual: floatNativeFromTextual,
+			textualFromNative: floatTextualFromNative,
+		},
+		"int": {
+
+			typeName:          &name{"int", nullNamespace},
+			binaryFromNative:  intBinaryFromNative,
+			nativeFromBinary:  intNativeFromBinary,
+			nativeFromTextual: intNativeFromTextual,
+			textualFromNative: intTextualFromNative,
+		},
+		"long": {
+			typeName:          &name{"long", nullNamespace},
+			binaryFromNative:  longBinaryFromNative,
+			nativeFromBinary:  longNativeFromBinary,
+			nativeFromTextual: longNativeFromTextual,
+			textualFromNative: longTextualFromNative,
+		},
+		"null": {
+			typeName:          &name{"null", nullNamespace},
+			binaryFromNative:  nullBinaryFromNative,
+			nativeFromBinary:  nullNativeFromBinary,
+			nativeFromTextual: nullNativeFromTextual,
+			textualFromNative: nullTextualFromNative,
+		},
+		"string": {
+			typeName:          &name{"string", nullNamespace},
+			binaryFromNative:  stringBinaryFromNative,
+			nativeFromBinary:  stringNativeFromBinary,
+			nativeFromTextual: stringNativeFromTextual,
+			textualFromNative: stringTextualFromNative,
+		},
+	}
 }
 
 // NewCodec returns a Codec used to translate between a byte slice of either
@@ -81,149 +142,34 @@ type Codec struct {
 //             fmt.Println(err)
 //     }
 func NewCodec(schemaSpecification string) (*Codec, error) {
-	var schema interface{}
+	// bootstrap a symbol table with primitive type codecs for the new codec
+	st := newSymbolTable()
 
+	// NOTE: Some clients might give us unadorned primitive type name for the
+	// schema, e.g., "long". While it is not valid JSON, it is a valid schema.
+	// Provide special handling for primitive type names.
+	if c, ok := st[schemaSpecification]; ok {
+		c.schema = schemaSpecification
+		return c, nil
+	}
+
+	// NOTE: At this point, schema should be valid JSON, otherwise it's an error
+	// condition.
+	var schema interface{}
 	if err := json.Unmarshal([]byte(schemaSpecification), &schema); err != nil {
 		return nil, fmt.Errorf("cannot unmarshal schema JSON: %s", err)
 	}
 
-	// bootstrap a symbol table with primitive type codecs for the new codec
-	st := newSymbolTable()
-
 	c, err := buildCodec(st, nullNamespace, schema)
-	if err != nil {
-		return nil, err
+	if err == nil {
+		// compact schema and save it
+		compact, err := json.Marshal(schema)
+		if err != nil {
+			return nil, fmt.Errorf("cannot remarshal schema: %s", err)
+		}
+		c.schema = string(compact)
 	}
-	c.schemaCanonical, err = parsingCanonicalForm(schema)
-	if err != nil {
-		return nil, err // should not get here because schema was validated above
-	}
-	c.schemaOriginal = schemaSpecification
-	return c, nil
-}
-
-func newSymbolTable() map[string]*Codec {
-	return map[string]*Codec{
-		"boolean": {
-			typeName:          &name{"boolean", nullNamespace},
-			schemaOriginal:    "boolean",
-			schemaCanonical:   "boolean",
-			binaryFromNative:  booleanBinaryFromNative,
-			nativeFromBinary:  booleanNativeFromBinary,
-			nativeFromTextual: booleanNativeFromTextual,
-			textualFromNative: booleanTextualFromNative,
-		},
-		"bytes": {
-			typeName:          &name{"bytes", nullNamespace},
-			schemaOriginal:    "bytes",
-			schemaCanonical:   "bytes",
-			binaryFromNative:  bytesBinaryFromNative,
-			nativeFromBinary:  bytesNativeFromBinary,
-			nativeFromTextual: bytesNativeFromTextual,
-			textualFromNative: bytesTextualFromNative,
-		},
-		"double": {
-			typeName:          &name{"double", nullNamespace},
-			schemaOriginal:    "double",
-			schemaCanonical:   "double",
-			binaryFromNative:  doubleBinaryFromNative,
-			nativeFromBinary:  doubleNativeFromBinary,
-			nativeFromTextual: doubleNativeFromTextual,
-			textualFromNative: doubleTextualFromNative,
-		},
-		"float": {
-			typeName:          &name{"float", nullNamespace},
-			schemaOriginal:    "float",
-			schemaCanonical:   "float",
-			binaryFromNative:  floatBinaryFromNative,
-			nativeFromBinary:  floatNativeFromBinary,
-			nativeFromTextual: floatNativeFromTextual,
-			textualFromNative: floatTextualFromNative,
-		},
-		"int": {
-			typeName:          &name{"int", nullNamespace},
-			schemaOriginal:    "int",
-			schemaCanonical:   "int",
-			binaryFromNative:  intBinaryFromNative,
-			nativeFromBinary:  intNativeFromBinary,
-			nativeFromTextual: intNativeFromTextual,
-			textualFromNative: intTextualFromNative,
-		},
-		"long": {
-			typeName:          &name{"long", nullNamespace},
-			schemaOriginal:    "long",
-			schemaCanonical:   "long",
-			binaryFromNative:  longBinaryFromNative,
-			nativeFromBinary:  longNativeFromBinary,
-			nativeFromTextual: longNativeFromTextual,
-			textualFromNative: longTextualFromNative,
-		},
-		"null": {
-			typeName:          &name{"null", nullNamespace},
-			schemaOriginal:    "null",
-			schemaCanonical:   "null",
-			binaryFromNative:  nullBinaryFromNative,
-			nativeFromBinary:  nullNativeFromBinary,
-			nativeFromTextual: nullNativeFromTextual,
-			textualFromNative: nullTextualFromNative,
-		},
-		"string": {
-			typeName:          &name{"string", nullNamespace},
-			schemaOriginal:    "string",
-			schemaCanonical:   "string",
-			binaryFromNative:  stringBinaryFromNative,
-			nativeFromBinary:  stringNativeFromBinary,
-			nativeFromTextual: stringNativeFromTextual,
-			textualFromNative: stringTextualFromNative,
-		},
-		// Start of compiled logical types using format typeName.logicalType where there is
-		// no dependence on schema.
-		"long.timestamp-millis": {
-			typeName:          &name{"long.timestamp-millis", nullNamespace},
-			schemaOriginal:    "long",
-			schemaCanonical:   "long",
-			nativeFromTextual: nativeFromTimeStampMillis(longNativeFromTextual),
-			binaryFromNative:  timeStampMillisFromNative(longBinaryFromNative),
-			nativeFromBinary:  nativeFromTimeStampMillis(longNativeFromBinary),
-			textualFromNative: timeStampMillisFromNative(longTextualFromNative),
-		},
-		"long.timestamp-micros": {
-			typeName:          &name{"long.timestamp-micros", nullNamespace},
-			schemaOriginal:    "long",
-			schemaCanonical:   "long",
-			nativeFromTextual: nativeFromTimeStampMicros(longNativeFromTextual),
-			binaryFromNative:  timeStampMicrosFromNative(longBinaryFromNative),
-			nativeFromBinary:  nativeFromTimeStampMicros(longNativeFromBinary),
-			textualFromNative: timeStampMicrosFromNative(longTextualFromNative),
-		},
-		"int.time-millis": {
-			typeName:          &name{"int.time-millis", nullNamespace},
-			schemaOriginal:    "int",
-			schemaCanonical:   "int",
-			nativeFromTextual: nativeFromTimeMillis(intNativeFromTextual),
-			binaryFromNative:  timeMillisFromNative(intBinaryFromNative),
-			nativeFromBinary:  nativeFromTimeMillis(intNativeFromBinary),
-			textualFromNative: timeMillisFromNative(intTextualFromNative),
-		},
-		"long.time-micros": {
-			typeName:          &name{"long.time-micros", nullNamespace},
-			schemaOriginal:    "long",
-			schemaCanonical:   "long",
-			nativeFromTextual: nativeFromTimeMicros(longNativeFromTextual),
-			binaryFromNative:  timeMicrosFromNative(longBinaryFromNative),
-			nativeFromBinary:  nativeFromTimeMicros(longNativeFromBinary),
-			textualFromNative: timeMicrosFromNative(longTextualFromNative),
-		},
-		"int.date": {
-			typeName:          &name{"int.date", nullNamespace},
-			schemaOriginal:    "int",
-			schemaCanonical:   "int",
-			nativeFromTextual: nativeFromDate(intNativeFromTextual),
-			binaryFromNative:  dateFromNative(intBinaryFromNative),
-			nativeFromBinary:  nativeFromDate(intNativeFromBinary),
-			textualFromNative: dateFromNative(intTextualFromNative),
-		},
-	}
+	return c, err
 }
 
 // BinaryFromNative appends the binary encoded byte slice representation of the
@@ -276,8 +222,8 @@ func (c *Codec) BinaryFromNative(buf []byte, datum interface{}) ([]byte, error) 
 
 // NativeFromBinary returns a native datum value from the binary encoded byte
 // slice in accordance with the Avro schema supplied when creating the Codec. On
-// success, it returns the decoded datum, a byte slice containing the remaining
-// undecoded bytes, and a nil error value. On error, it returns nil for
+// success, it returns the decoded datum, along with a new byte slice with the
+// decoded bytes consumed, and a nil error value. On error, it returns nil for
 // the datum value, the original byte slice, and the error message.
 //
 //     func ExampleNativeFromBinary() {
@@ -398,46 +344,19 @@ func (c *Codec) TextualFromNative(buf []byte, datum interface{}) ([]byte, error)
 	return newBuf, nil
 }
 
-// Schema returns the original schema used to create the Codec.
+// Schema returns the compact schema used to create the Codec.
+//
+//     func ExampleCodecSchema() {
+//         schema := `{"type":"map","values":{"type":"enum","name":"foo","symbols":["alpha","bravo"]}}`
+//         codec, err := goavro.NewCodec(schema)
+//         if err != nil {
+//             fmt.Println(err)
+//         }
+//         fmt.Println(codec.Schema())
+//         // Output: {"type":"map","values":{"name":"foo","type":"enum","symbols":["alpha","bravo"]}}
+//     }
 func (c *Codec) Schema() string {
-	return c.schemaOriginal
-}
-
-// CanonicalSchema returns the Parsing Canonical Form of the schema according to
-// the Avro specification.
-func (c *Codec) CanonicalSchema() string {
-	return c.schemaCanonical
-}
-
-const crc64Empty = uint64(0xc15d213aa4d7a795)
-
-func initCRC64AvroTable() [256]uint64 {
-	var crc64Table [256]uint64
-	for i := uint64(0); i < 256; i++ {
-		fp := i
-		for j := 0; j < 8; j++ {
-			fp = (fp >> 1) ^ (crc64Empty & -(fp & 1)) // unsigned right shift >>>
-		}
-		crc64Table[i] = fp
-	}
-	return crc64Table
-}
-
-func calculateCRC64Avro(b []byte) uint64 {
-	crc64Table := initCRC64AvroTable()
-	fp := crc64Empty
-	for i := 0; i < len(b); i++ {
-		fp = (fp >> 8) ^ crc64Table[(byte(fp)^b[i])&0xff] // unsigned right shift >>>
-	}
-	return fp
-}
-
-// SchemaCRC64Avro returns a signed 64-bit integer Rabin fingerprint for the
-// canonical schema.
-func (c *Codec) SchemaCRC64Avro() int64 {
-	// Must perform the bitwise calculations using unsigned 64-bit integer math,
-	// but the Avro code and test files return a signed 64-bit integer.
-	return int64(calculateCRC64Avro([]byte(c.schemaCanonical)))
+	return c.schema
 }
 
 // convert a schema data structure to a codec, prefixing with specified
@@ -481,29 +400,20 @@ func buildCodecForTypeDescribedByMap(st map[string]*Codec, enclosingNamespace st
 }
 
 func buildCodecForTypeDescribedByString(st map[string]*Codec, enclosingNamespace string, typeName string, schemaMap map[string]interface{}) (*Codec, error) {
-	isLogicalType := false
-	searchType := typeName
-	// logicalType will be non-nil for those fields without a logicalType property set
-	if lt := schemaMap["logicalType"]; lt != nil {
-		isLogicalType = true
-		searchType = fmt.Sprintf("%s.%s", typeName, lt)
-	}
-	// NOTE: When codec already exists, return it. This includes both primitive and
-	// logicalType codecs added in NewCodec, and user-defined types, added while
+	// NOTE: When codec already exists, return it. This includes both primitive
+	// type codecs added in NewCodec, and user-defined types, added while
 	// building the codec.
-	if cd, ok := st[searchType]; ok {
+	if cd, ok := st[typeName]; ok {
 		return cd, nil
 	}
-
-	// Avro specification allows abbreviation of type name inside a namespace.
+	// NOTE: Sometimes schema may abbreviate type name inside a namespace.
 	if enclosingNamespace != "" {
 		if cd, ok := st[enclosingNamespace+"."+typeName]; ok {
 			return cd, nil
 		}
 	}
-
 	// There are only a small handful of complex Avro data types.
-	switch searchType {
+	switch typeName {
 	case "array":
 		return makeArrayCodec(st, enclosingNamespace, schemaMap)
 	case "enum":
@@ -514,16 +424,8 @@ func buildCodecForTypeDescribedByString(st map[string]*Codec, enclosingNamespace
 		return makeMapCodec(st, enclosingNamespace, schemaMap)
 	case "record":
 		return makeRecordCodec(st, enclosingNamespace, schemaMap)
-	case "bytes.decimal":
-		return makeDecimalBytesCodec(st, enclosingNamespace, schemaMap)
-	case "fixed.decimal":
-		return makeDecimalFixedCodec(st, enclosingNamespace, schemaMap)
 	default:
-		if isLogicalType {
-			delete(schemaMap, "logicalType")
-			return buildCodecForTypeDescribedByString(st, enclosingNamespace, typeName, schemaMap)
-		}
-		return nil, fmt.Errorf("unknown type name: %q", searchType)
+		return nil, fmt.Errorf("unknown type name: %q", typeName)
 	}
 }
 

@@ -1,4 +1,4 @@
-// Copyright [2019] LinkedIn Corp. Licensed under the Apache License, Version
+// Copyright [2017] LinkedIn Corp. Licensed under the Apache License, Version
 // 2.0 (the "License"); you may not use this file except in compliance with the
 // License.  You may obtain a copy of the License at
 // http://www.apache.org/licenses/LICENSE-2.0
@@ -47,7 +47,7 @@ func makeMapCodec(st map[string]*Codec, namespace string, schemaMap map[string]i
 				if blockCount == math.MinInt64 {
 					// The minimum number for any signed numerical type can
 					// never be made positive
-					return nil, nil, fmt.Errorf("cannot decode binary map with block count: %d", blockCount)
+					return nil, nil, fmt.Errorf("cannot decode binary map with block count: %d", math.MinInt64)
 				}
 				blockCount = -blockCount // convert to its positive equivalent
 				if _, buf, err = longNativeFromBinary(buf); err != nil {
@@ -94,7 +94,7 @@ func makeMapCodec(st map[string]*Codec, namespace string, schemaMap map[string]i
 					if blockCount == math.MinInt64 {
 						// The minimum number for any signed numerical type can
 						// never be made positive
-						return nil, nil, fmt.Errorf("cannot decode binary map with block count: %d", blockCount)
+						return nil, nil, fmt.Errorf("cannot decode binary map with block count: %d", math.MinInt64)
 					}
 					blockCount = -blockCount // convert to its positive equivalent
 					if _, buf, err = longNativeFromBinary(buf); err != nil {

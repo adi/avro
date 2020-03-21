@@ -207,7 +207,7 @@ func TestQuery2AVRO(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	expetedTextual := `[{"body":"lorem ipsum etc...","title":"lorem ipsum","post_date":14344,"content_type":null,"update_date":{"int.date":14344},"update_timestamp":{"int":1239321600},"some_nullable_int32":{"int":42},"post_timestamp":1239321600,"ID":42,"update_time":{"int":2764800},"update_datetime":{"int":1239321600},"post_time":2764800,"some_nullable_float64":{"double":4242.4242},"daily_average_traffic":"u4","some_nullable_blob":{"bytes":"lorem ipsum dolor etc..."},"post_datetime":1239321600,"some_nullable_int64":{"long":4242},"reading_time_minutes":{"bytes.decimal":"\u0014"},"some_int64":4242,"some_float64":4242.4242,"some_float32":42.42,"some_nullable_float32":{"float":42.42},"author":{"string":"John Doe"}}]`
+	expetedTextual := `[{"body":"lorem ipsum etc...","title":"lorem ipsum","post_date":14344,"content_type":null,"update_date":{"int":14344},"update_timestamp":{"int":1239321600},"some_nullable_int32":{"int":42},"post_timestamp":1239321600,"ID":42,"update_time":{"int":2764800},"update_datetime":{"int":1239321600},"post_time":2764800,"some_nullable_float64":{"double":4242.4242},"daily_average_traffic":"u4","some_nullable_blob":{"bytes":"lorem ipsum dolor etc..."},"post_datetime":1239321600,"some_nullable_int64":{"long":4242},"reading_time_minutes":{"bytes":"\u0014"},"some_int64":4242,"some_float64":4242.4242,"some_float32":42.42,"some_nullable_float32":{"float":42.42},"author":{"string":"John Doe"}}]`
 	if !JSONArraysEquals([]byte(expetedTextual), textual) {
 		t.Errorf("expected:\n%s\ngot:\n%s\n", string(expetedTextual), string(textual))
 	}

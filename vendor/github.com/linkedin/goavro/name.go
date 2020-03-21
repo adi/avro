@@ -1,4 +1,4 @@
-// Copyright [2019] LinkedIn Corp. Licensed under the Apache License, Version
+// Copyright [2017] LinkedIn Corp. Licensed under the Apache License, Version
 // 2.0 (the "License"); you may not use this file except in compliance with the
 // License.  You may obtain a copy of the License at
 // http://www.apache.org/licenses/LICENSE-2.0
@@ -117,12 +117,13 @@ func newNameFromSchemaMap(enclosingNamespace string, schemaMap map[string]interf
 	}
 	nameString, ok = name.(string)
 	if !ok || nameString == nullNamespace {
-		return nil, fmt.Errorf("schema name ought to be non-empty string; received: %T: %v", name, name)
+		return nil, fmt.Errorf("schema name ought to be non-empty string; received: %T", name)
 	}
-	if namespace, ok := schemaMap["namespace"]; ok {
+	namespace, ok := schemaMap["namespace"]
+	if ok {
 		namespaceString, ok = namespace.(string)
 		if !ok || namespaceString == nullNamespace {
-			return nil, fmt.Errorf("schema namespace, if provided, ought to be non-empty string; received: %T: %v", namespace, namespace)
+			return nil, fmt.Errorf("schema namespace, if provided, ought to be non-empty string; received: %T", namespace)
 		}
 	}
 

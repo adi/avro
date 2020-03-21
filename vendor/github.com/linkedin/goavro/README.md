@@ -7,32 +7,51 @@ Goavro is a library that encodes and decodes Avro data.
 * Encodes to and decodes from both binary and textual JSON Avro data.
 * `Codec` is stateless and is safe to use by multiple goroutines.
 
-With the exception of features not yet supported, goavro attempts to
-be fully compliant with the most recent version of the
+With the exception of features not yet supported, goavro attempts to be
+fully compliant with the most recent version of the
 [Avro specification](http://avro.apache.org/docs/1.8.2/spec.html).
 
-## Dependency Notice
+## NOTICE
 
-All usage of `gopkg.in` has been removed in favor of Go modules.
-Please update your import paths to `github.com/linkedin/goavro/v2`.  v1
-users can still use old versions of goavro by adding a constraint to
-your `go.mod` or `Gopkg.toml` file.
+This goavro library has been rewritten to correct a large number of
+shortcomings:
 
+* https://github.com/linkedin/goavro/issues/8
+* https://github.com/linkedin/goavro/issues/36
+* https://github.com/linkedin/goavro/issues/45
+* https://github.com/linkedin/goavro/issues/55
+* https://github.com/linkedin/goavro/issues/71
+* https://github.com/linkedin/goavro/issues/72
+* https://github.com/linkedin/goavro/issues/81
+
+As a consequence of the rewrite, the API has been significantly
+simplified, taking into account suggestions from users received during
+the past few years since its original release.
+
+The original version of this library is still available, however the
+v1 branch does not support all the same features, has a number of
+outstanding bugs, and performs significantly slower than the v2
+branch. Users are highly encouraged to update their software to use
+the v2 branch, but until they do, they can continue to use the v1
+branch by modifying import statements:
+
+```Go
+import goavro "gopkg.in/linkedin/goavro.v1"
 ```
-require (
-    github.com/linkedin/goavro v1.0.5
-)
-```
 
-```toml
-[[constraint]]
-name = "github.com/linkedin/goavro"
-version = "=1.0.5"
-```
+### Justification for API Change
 
-## Major Improvements in v2 over v1
+It was a very difficult decision to break the API when creating the
+new version, but in the end the benefits outweighed the consequences:
 
-### Avro namespaces
+1. Allowed proper handling of Avro namespaces.
+1. Eliminated largest gripe of users: getting data into and out of
+   records.
+1. Provided significant, 3x--4x speed improvement for all tasks.
+1. Allowed textual encoding to and decoding from Avro JSON.
+1. Better handling of record field default values.
+
+#### Avro namespaces
 
 The original version of this library was written prior to my really
 understanding how Avro namespaces ought to work. After using Avro for
@@ -42,7 +61,7 @@ case the Apache Avro distribution has for namespaces, including being
 able to refer to a previously defined data type later on in the same
 schema.
 
-### Getting Data into and out of Records
+#### Getting Data into and out of Records
 
 The original version of this library required creating `goavro.Record`
 instances, and use of getters and setters to access a record's
@@ -55,7 +74,7 @@ The new version of this library eliminates the `goavro.Record` type,
 and accepts a native Go map for all records to be encoded. Keys are
 the field names, and values are the field values. Nothing could be
 more easy. Conversely, decoding Avro data yields a native Go map for
-the upstream client to pull data back out of.
+the upstream client to pull data back out out.
 
 Furthermore, there is never a reason to ever have to break your schema
 down into record schemas. Merely feed the entire schema into the
@@ -64,7 +83,7 @@ it. This library knows how to parse the data provided to it and ensure
 data values for records and their fields are properly encoded and
 decoded.
 
-### 3x--4x Performance Improvement
+#### 3x--4x Performance Improvement
 
 The original version of this library was truly written with Go's idea
 of `io.Reader` and `io.Writer` composition in mind. Although
@@ -74,7 +93,7 @@ decode the bytes, and repeat. This version, by using a native Go byte
 slice, both decoding and encoding complex Avro data here at LinkedIn
 is between three and four times faster than before.
 
-### Avro JSON Support
+#### Avro JSON Support
 
 The original version of this library did not support JSON encoding or
 decoding, because it wasn't deemed useful for our internal use at the
@@ -82,7 +101,7 @@ time. When writing the new version of the library I decided to tackle
 this issue once and for all, because so many engineers needed this
 functionality for their work.
 
-### Better Handling of Record Field Default Values
+#### Better Handling of Record Field Default Values
 
 The original version of this library did not well handle default
 values for record fields. This version of the library uses a default
@@ -142,7 +161,7 @@ package main
 import (
     "fmt"
 
-    "github.com/linkedin/goavro/v2"
+    "github.com/linkedin/goavro"
 )
 
 func main() {
@@ -304,7 +323,7 @@ func ExampleUnion() {
     if err != nil {
         fmt.Println(err)
     }
-    buf, err := codec.TextualFromNative(nil, goavro.Union("string", "some string"))
+    buf, err := codec.TextFromNative(nil, goavro.Union("string", "some string"))
     if err != nil {
         fmt.Println(err)
     }
